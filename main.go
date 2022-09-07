@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-
+	"github.com/matheusgb/pocPostFile/handlers"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
@@ -10,10 +9,7 @@ import (
 func main() {
 	router := routing.New()
 
-	router.Get("/upload", func(context *routing.Context) error {
-		fmt.Fprintf(context, "Hello, world!")
-		return nil
-	})
+	router.Get("/upload", handlers.GetFile)
 
-	panic(fasthttp.ListenAndServe(":8080", router.HandleRequest))
+	fasthttp.ListenAndServe(":8080", router.HandleRequest)
 }
