@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 
 	firebase "firebase.google.com/go"
 	"github.com/matheusgb/pocPostFile/models"
@@ -15,7 +14,6 @@ import (
 	"cloud.google.com/go/firestore"
 	cloud "cloud.google.com/go/storage"
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 	"google.golang.org/api/option"
 )
 
@@ -27,7 +25,6 @@ type App struct {
 }
 
 func main() {
-	godotenv.Load()
 	route := App{}
 	route.Init()
 	route.Run()
@@ -58,19 +55,11 @@ func (route *App) Init() {
 
 	route.Router = mux.NewRouter()
 	route.initializeRoutes()
-	fmt.Println("Successfully connected at port : " + route.GetPort())
-}
-
-func (route *App) GetPort() string {
-	var port = os.Getenv("MyPort")
-	if port == "" {
-		port = "5000"
-	}
-	return ":" + port
+	fmt.Println("Successfully connected at port: 5000")
 }
 
 func (route *App) Run() {
-	log.Fatal(http.ListenAndServe(route.GetPort(), route.Router))
+	log.Fatal(http.ListenAndServe(":5000", route.Router))
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
