@@ -3,129 +3,56 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-
-	firebase "firebase.google.com/go"
-	"github.com/matheusgb/pocPostFile/models"
 
 	"cloud.google.com/go/firestore"
 	cloud "cloud.google.com/go/storage"
-	"github.com/gorilla/mux"
+	firebase "firebase.google.com/go"
+	"github.com/matheusgb/pocPostFile/handlers"
+	routing "github.com/rmnoff/fasthttp-routing/v3"
+	"github.com/valyala/fasthttp"
 	"google.golang.org/api/option"
 )
 
 type App struct {
-	Router  *mux.Router
 	ctx     context.Context
 	client  *firestore.Client
 	storage *cloud.Client
 }
 
 func main() {
-	route := App{}
-	route.Init()
-	route.Run()
+	application := App{}
+	application.Init()
+
+	router := routing.New()
+	router.Get("/", handlers.Get)
+	router.Post("/", application.Post)
+
+	fasthttp.ListenAndServe(":3000", router.HandleRequest)
 }
 
-func (route *App) Init() {
+func (application *App) Init() {
+	application.ctx = context.Background()
+	serviceAccount := option.WithCredentialsFile("./serviceAccountKey.json")
 
-	route.ctx = context.Background()
-
-	sa := option.WithCredentialsFile("serviceAccountKey.json")
-
-	var err error
-
-	app, err := firebase.NewApp(route.ctx, nil, sa)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	route.client, err = app.Firestore(route.ctx)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	route.storage, err = cloud.NewClient(route.ctx, sa)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	route.Router = mux.NewRouter()
-	route.initializeRoutes()
-	fmt.Println("Successfully connected at port: 5000")
+	app, _ := firebase.NewApp(application.ctx, nil, serviceAccount)
+	application.client, _ = app.Firestore(application.ctx)
+	application.storage, _ = cloud.NewClient(application.ctx, serviceAccount)
 }
 
-func (route *App) Run() {
-	log.Fatal(http.ListenAndServe(":5000", route.Router))
-}
-
-func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, _ := json.Marshal(payload)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	w.Write(response)
-}
-
-func respondWithError(w http.ResponseWriter, code int, message string) {
-	respondWithJSON(w, code, map[string]string{"error": message})
-}
-
-func (route *App) initializeRoutes() {
-	route.Router.HandleFunc("/", route.Home).Methods("GET")
-	route.Router.HandleFunc("/upload/image", route.UploadImage).Methods("POST")
-}
-
-func (route *App) Home(w http.ResponseWriter, r *http.Request) {
-	respondWithJSON(w, http.StatusOK, "Hello World!")
-}
-
-func (route *App) UploadImage(w http.ResponseWriter, r *http.Request) {
-
-	file, handler, err := r.FormFile("image")
-	r.ParseMultipartForm(10 << 20)
-	if err != nil {
-		respondWithJSON(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	defer file.Close()
-
-	imagePath := handler.Filename
-
+func (application *App) Post(c *routing.Context) error {
+	file, _ := c.FormFile("image")
+	fileName := file.Filename
 	bucket := "pocpostgolang.appspot.com"
 
-	wc := route.storage.Bucket(bucket).Object(imagePath).NewWriter(route.ctx)
-	_, err = io.Copy(wc, file)
-	if err != nil {
-		respondWithJSON(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := wc.Close(); err != nil {
-		respondWithJSON(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	newWriter := application.storage.Bucket(bucket).Object(fileName).NewWriter(c)
+	newWriter.ContentType = "image/jpeg"
 
-	err = CreateImageUrl(imagePath, bucket, route.ctx, route.client)
-	if err != nil {
-		respondWithJSON(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	respondWithJSON(w, http.StatusCreated, "Create image success.")
 }
 
-func CreateImageUrl(imagePath string, bucket string, ctx context.Context, client *firestore.Client) error {
-	imageStructure := models.ImageStructure{
-		ImageName: imagePath,
-		URL:       "https://storage.cloud.google.com/" + bucket + "/" + imagePath,
-	}
+func respondWithJSON(c *routing.Context, code int, payload interface{}) {
+	response, _ := json.Marshal(payload)
 
-	_, _, err := client.Collection("image").Add(ctx, imageStructure)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	c.SetContentType("application/json")
+	c.SetStatusCode(code)
+	c.Write(response)
 }
