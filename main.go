@@ -19,11 +19,10 @@ func main() {
 
 	router.Post("/upload", uploadFile)
 	server.ListenAndServe(":8080")
-
 }
 
 func uploadFile(ctx *routing.Context) error {
-	fileHeader, err := ctx.FormFile("file") // key da requisição
+	fileHeader, err := ctx.FormFile("file")
 	if err != nil {
 		fmt.Println("Erro ao receber o arquivo")
 		return nil
