@@ -21,8 +21,8 @@ func main() {
 	server.ListenAndServe(":8080")
 }
 
-func uploadFile(ctx *routing.Context) error {
-	fileHeader, err := ctx.FormFile("file")
+func uploadFile(context *routing.Context) error {
+	fileHeader, err := context.FormFile("file")
 	if err != nil {
 		fmt.Println("Erro ao receber o arquivo")
 		return nil
