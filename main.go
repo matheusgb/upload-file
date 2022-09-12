@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 
 	routing "github.com/rmnoff/fasthttp-routing/v3"
 	"github.com/valyala/fasthttp"
@@ -21,8 +22,15 @@ func uploadFile(ctx *routing.Context) error {
 }
 
 func main() {
+
 	router := routing.New()
+	server := &fasthttp.Server{
+		Handler:            router.HandleRequest,
+		Name:               "FastHTTP Server",
+		MaxRequestBodySize: math.MaxInt32,
+	}
 
 	router.Post("/upload", uploadFile)
-	fasthttp.ListenAndServe(":8080", router.HandleRequest)
+	server.ListenAndServe(":8080")
+
 }
