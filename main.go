@@ -9,12 +9,12 @@ import (
 )
 
 func uploadFile(ctx *routing.Context) error {
-
 	fileHeader, err := ctx.FormFile("file") // key da requisição
 	if err != nil {
 		fmt.Println("Erro ao receber o arquivo")
 		return nil
 	}
+
 	fasthttp.SaveMultipartFile(fileHeader, fmt.Sprintf("./uploads/%s", fileHeader.Filename))
 
 	fmt.Println("Arquivo recebido com sucesso")
@@ -22,8 +22,8 @@ func uploadFile(ctx *routing.Context) error {
 }
 
 func main() {
-
 	router := routing.New()
+
 	server := &fasthttp.Server{
 		Handler:            router.HandleRequest,
 		Name:               "FastHTTP Server",
